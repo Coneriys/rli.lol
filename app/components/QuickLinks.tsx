@@ -2,7 +2,7 @@
 'use client';
 
 import { Card } from "@heroui/react";
-import { SiGo, SiPython, SiJavascript, SiReact, SiDocker } from "react-icons/si";
+import { SiGo, SiPython, SiJavascript, SiReact } from "react-icons/si";
 
 export function QuickLinks() {
   const links = [

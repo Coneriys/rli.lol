@@ -17,7 +17,7 @@ FROM oven/bun:latest as runner
 WORKDIR /app
 
 # Копируем собранные файлы из builder
-COPY --from=builder /* ./
+COPY --from=builder /app/* ./
 
 ENV NODE_ENV production
 ENV PORT 3000

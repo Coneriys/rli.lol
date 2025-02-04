@@ -17,10 +17,7 @@ FROM oven/bun:latest as runner
 WORKDIR /app
 
 # Копируем собранные файлы из builder
-COPY --from=builder /app/next.config.js ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /* ./
 
 ENV NODE_ENV production
 ENV PORT 3000

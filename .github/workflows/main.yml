@@ -21,12 +21,12 @@ jobs:
           echo "export PATH=\"\$HOME/.bun/bin:\$PATH\"" >> $GITHUB_ENV
 
       # Установка зависимостей
-      - name: Установка зависимостей
-        run: bun install
+      - name: Установка зависимостей с помощью Bun
+        run: ~/.bun/bin/bun install
         
-      # Сборка приложения
-      - name: Сборка приложения
-        run: bun run build
+      - name: Сборка приложения с помощью Bun
+        run: ~/.bun/bin/bun run build
+
         
       # Деплой на сервер через SSH
       - name: Деплой на сервер

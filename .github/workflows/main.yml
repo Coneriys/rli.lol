@@ -1,3 +1,4 @@
+# .github/workflows/main.yml
 name: CI/CD Pipeline
 
 on:
@@ -11,17 +12,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Проверка кода
       - uses: actions/checkout@v4
-
+      
       # Установка Bun
       - name: Установка Bun
-        run: curl -fsSL https://bun.sh/install | bash
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "export PATH=\"\$HOME/.bun/bin:\$PATH\"" >> $GITHUB_ENV
 
-      # Установка зависимостей и сборка
+      # Установка зависимостей
       - name: Установка зависимостей
         run: bun install
         
+      # Сборка приложения
       - name: Сборка приложения
         run: bun run build
         

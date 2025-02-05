@@ -2,42 +2,26 @@ version: '3.8'
 
 services:
   app:
-    image: app:${DOCKER_TAG:-latest}
-    restart: unless-stopped
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.app.rule=Host(`rli.lol`) && PathPrefix(`/`)
-      - traefik.http.routers.app.entrypoints=websecure
-      - traefik.http.routers.app.tls.certresolver=letsencrypt
-      - traefik.http.services.app.loadbalancer.server.port=3000
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    image: next-app:latest
+    restart: always
     networks:
-      - traefik
-    # Убрать deploy секцию если не используется Docker Swarm
+      - caddy
+    labels:
+      caddy.proxy: "/http://app:3000"
+      caddy.health_path: "/health"
 
-  traefik:
-    image: traefik:v2.10
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.email=levdmytriev@gmail.com
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+  caddy:
+    image: caddy:2.8.0-alpine
+    restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./letsencrypt:/letsencrypt
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy_data:/data
     networks:
-      - traefik
+      - caddy
 
 networks:
-  traefik:
+  caddy:
     driver: bridge

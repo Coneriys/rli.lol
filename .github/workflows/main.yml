@@ -1,98 +1,43 @@
-name: Zero Downtime Deployment
+name: Deploy
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
-
-env:
-  DOCKER_IMAGE: app
-  DOCKER_TAG: ${{ github.sha }}
-  SERVICE_NAME: app
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
-          driver-opts: network=host
+    - name: Build Docker image
+      run: |
+        docker build -t next-app:latest .
+        docker save -o image.tar next-app:latest
 
-      - name: Cache Bun dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            bun.lock
-            node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-
-      - name: Install Bun
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build application
-        run: bun run build
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.DOCKER_IMAGE }}:latest
-            ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            mkdir -p /app
-            docker compose -f /app/docker-compose.yml pull || true
-            docker compose -f /app/docker-compose.yml up -d --no-deps --scale ${{ env.SERVICE_NAME }}=2
-            sleep 15
-            docker compose -f /app/docker-compose.yml exec ${{ env.SERVICE_NAME }} bun run migrate
-            docker compose -f /app/docker-compose.yml stop ${{ env.SERVICE_NAME }}-old 
-            docker compose -f /app/docker-compose.yml rm -f ${{ env.SERVICE_NAME }}-old
-
-      - name: Rollback on failure
-        if: failure()
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            docker compose -f /app/docker-compose.yml stop ${{ env.SERVICE_NAME }}-new
-            docker compose -f /app/docker-compose.yml rm -f ${{ env.SERVICE_NAME }}-new
-            docker compose -f /app/docker-compose.yml up -d --no-deps
-
-      - name: Notify deployment status
-        uses: actions/github-script@v6
-        if: always()
-        with:
-          script: |
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: github.context.job.status === 'success' ? 'success' : 'error',
-              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              description: github.context.job.status === 'success' ? 'Deployment succeeded' : 'Deployment failed',
-              context: "production"
-            })
+    - name: Transfer artifacts
+      uses: appleboy/scp-action@v1
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: 22
+        source: "image.tar,docker-compose.yml,Caddyfile"
+        target: "~/next-app"
+    - name: Deploy on server
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        script: |
+          cd ~/next-app
+          docker load -i image.tar
+          docker compose up -d --scale app=2 --no-recreate
+          sleep 10
+          docker compose up -d --force-recreate
+          docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+          docker compose rm app --force --stop -v

@@ -40,13 +40,14 @@ jobs:
       - name: Build application
         run: bun run build
 
-      - name: Build Docker image
+      - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: .
-          tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          push: true
+          tags: app:latest
+
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3

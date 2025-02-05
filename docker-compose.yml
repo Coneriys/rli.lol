@@ -1,27 +1,25 @@
-version: '3.8'
-
 services:
   app:
     image: next-app:latest
     restart: always
     networks:
       - caddy
-    labels:
-      caddy.proxy: "/http://app:3000"
-      caddy.health_path: "/health"
 
   caddy:
-    image: caddy:2.8.0-alpine
+    image: caddy:latest
     restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./caddy_data:/data
+      - caddy_data:/data
     networks:
       - caddy
 
 networks:
   caddy:
     driver: bridge
+
+volumes:
+  caddy_data:

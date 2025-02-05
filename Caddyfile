@@ -1,13 +1,8 @@
 rli.lol {
-    # Автоматический SSL от Let's Encrypt
     tls levdmytriev@gmail.com
-
-    # Редирект HTTP -> HTTPS
-    @http {
-        protocol http
-    }
-    redir @http https://{host}{uri} permanent
-
-    # Проксирование с проверкой работоспособности
     reverse_proxy app:3000
+}
+
+:80 {
+    redir https://{host}{uri} permanent
 }

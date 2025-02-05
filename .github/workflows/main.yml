@@ -1,4 +1,3 @@
-# .github/workflows/main.yml
 name: Zero Downtime Deployment
 
 on:
@@ -10,6 +9,7 @@ on:
 env:
   DOCKER_IMAGE: app
   DOCKER_TAG: ${{ github.sha }}
+  SERVICE_NAME: app
 
 jobs:
   build-and-deploy:
@@ -19,6 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: network=host
+
       - name: Cache Bun dependencies
         uses: actions/cache@v3
         with:
@@ -26,8 +32,6 @@ jobs:
             ~/.bun
             node_modules
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
 
       - name: Install Bun
         run: |
@@ -40,29 +44,31 @@ jobs:
       - name: Build application
         run: bun run build
 
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          push: true
-          tags: app:latest
-
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /app
-            docker compose pull app || true
-            docker compose up -d --no-deps --scale app=2 app
+            mkdir -p /app
+            docker compose -f /app/docker-compose.yml pull || true
+            docker compose -f /app/docker-compose.yml up -d --no-deps --scale ${{ env.SERVICE_NAME }}=2
             sleep 15
-            docker container ls --filter "name=app" --format "{{.ID}}" | xargs -I {} docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}' {} | grep -q "healthy"
-            docker compose exec app bun run migrate
-            docker compose stop app-old && docker compose rm -f app-old
+            docker compose -f /app/docker-compose.yml exec ${{ env.SERVICE_NAME }} bun run migrate
+            docker compose -f /app/docker-compose.yml stop ${{ env.SERVICE_NAME }}-old 
+            docker compose -f /app/docker-compose.yml rm -f ${{ env.SERVICE_NAME }}-old
 
       - name: Rollback on failure
         if: failure()
@@ -70,13 +76,13 @@ jobs:
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /app
-            docker compose stop app-new && docker compose rm -f app-new
-            docker compose up -d --no-deps app
+            docker compose -f /app/docker-compose.yml stop ${{ env.SERVICE_NAME }}-new
+            docker compose -f /app/docker-compose.yml rm -f ${{ env.SERVICE_NAME }}-new
+            docker compose -f /app/docker-compose.yml up -d --no-deps
 
-      - name: Notify status
+      - name: Notify deployment status
         uses: actions/github-script@v6
         if: always()
         with:
@@ -85,8 +91,8 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: context.sha,
-              state: job.status === 'success' ? 'success' : 'failure',
+              state: github.context.job.status === 'success' ? 'success' : 'error',
               target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              description: job.status === 'success' ? 'Deployment succeeded' : 'Deployment failed',
+              description: github.context.job.status === 'success' ? 'Deployment succeeded' : 'Deployment failed',
               context: "production"
             })

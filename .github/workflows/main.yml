@@ -19,18 +19,17 @@ jobs:
         docker save -o image.tar next-app:latest
         chmod 644 image.tar
 
-        - name: Transfer files via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          port: 22
-          source: "image.tar,docker-compose.yml"
-          target: "~/next-app"
-          # Убраны strip_components
-          overwrite: true  # Перезаписывать существующие файлы
-      
+    - name: Transfer files via SCP
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: 22
+        source: "image.tar,docker-compose.yml"
+        target: "~/next-app"
+        overwrite: true
+
     - name: Deploy to server
       uses: appleboy/ssh-action@v1.2.0
       with:
@@ -39,7 +38,6 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         script: |
           cd ~/next-app
-          ls -la  # Проверка наличия файлов
           sudo docker load -i image.tar
           sudo docker compose -f ~/next-app/docker-compose.yml up -d --force-recreate
-      
+          sudo docker image prune -af

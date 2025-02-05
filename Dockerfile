@@ -1,36 +1,26 @@
-# Этап сборки
-FROM oven/bun:latest as builder
+# Dockerfile
+FROM oven/bun:1.0.13 as builder
 
 WORKDIR /app
-
-# Копируем package.json и bun.lockb для установки зависимостей
-COPY package.json ./
-COPY bun.lock ./
-
-# Устанавливаем зависимости
-RUN bun install
-
-# Копируем весь проект и собираем приложение
+COPY package.json bun.lock ./
+RUN bun install --production --frozen-lockfile
 COPY . .
 RUN bun run build
 
-# Финальный этап
-FROM oven/bun:latest as runner
+FROM oven/bun:1.0.13-slim
 
 WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
 
-# Копируем только необходимые файлы из builder
-COPY --from=builder /app/next.config.ts ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json .
+COPY --from=builder /app/next.config.ts .
 
-
-ENV NODE_ENV production
-ENV PORT 3000
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
 
 EXPOSE 3000
-
 CMD ["bun", "start"]

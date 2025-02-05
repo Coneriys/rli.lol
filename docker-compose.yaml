@@ -1,12 +1,40 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: app:${DOCKER_TAG:-latest}
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`rli.lol`)
+      - traefik.http.routers.app.entrypoints=web
+      - traefik.http.services.app.loadbalancer.server.port=3000
+    networks:
+      - traefik
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+      rollback_config:
+        parallelism: 0
+        delay: 0s
+      restart_policy:
+        condition: on-failure
+
+  traefik:
+    image: traefik:v2.10
+    command:
+      - --providers.docker
+      - --entrypoints.web.address=:80
     ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
-    restart: always
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    driver: bridge

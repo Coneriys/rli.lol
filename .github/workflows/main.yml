@@ -1,44 +1,91 @@
 # .github/workflows/main.yml
-name: CI/CD Pipeline
+name: Zero Downtime Deployment
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  DOCKER_IMAGE: app
+  DOCKER_TAG: ${{ github.sha }}
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
-      
-      # Установка Bun
-      - name: Установка Bun
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.bun
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Bun
         run: |
           curl -fsSL https://bun.sh/install | bash
-          echo "export PATH=\"\$HOME/.bun/bin:\$PATH\"" >> $GITHUB_ENV
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      # Установка зависимостей
-      - name: Установка зависимостей с помощью Bun
-        run: ~/.bun/bin/bun install
-      
-      - name: Сборка приложения с помощью Bun
-        run: ~/.bun/bin/bun run build
-        
-      # Деплой на сервер через SSH
-      - name: Деплой на сервер через SSH
-        uses: appleboy/ssh-action@v0.1.7
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build application
+        run: bun run build
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          port: 22
           script: |
-            cd /home/konder/rli.lol
-            git pull origin main
-            docker compose down || true
-            docker compose up --build -d || true
+            cd /app
+            docker compose pull app || true
+            docker compose up -d --no-deps --scale app=2 app
+            sleep 15
+            docker container ls --filter "name=app" --format "{{.ID}}" | xargs -I {} docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}' {} | grep -q "healthy"
+            docker compose exec app bun run migrate
+            docker compose stop app-old && docker compose rm -f app-old
 
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /app
+            docker compose stop app-new && docker compose rm -f app-new
+            docker compose up -d --no-deps app
 
+      - name: Notify status
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: job.status === 'success' ? 'success' : 'failure',
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: job.status === 'success' ? 'Deployment succeeded' : 'Deployment failed',
+              context: "production"
+            })

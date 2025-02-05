@@ -35,9 +35,9 @@ jobs:
         password: ${{ secrets.SERVER_PASSWORD }}
         script: |
           cd ~/next-app
-          docker load -i image.tar
-          docker compose up -d --scale app=2 --no-recreate
+          sudo docker load -i image.tar
+          sudo docker compose up -d --scale app=2 --no-recreate
           sleep 10
-          docker compose up -d --force-recreate
-          docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-          docker compose rm app --force --stop -v
+          sudo docker compose up -d --force-recreate
+          sudop docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+          sudo docker compose rm app --force --stop -v

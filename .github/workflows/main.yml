@@ -1,4 +1,4 @@
-name: Deploy
+name: Zero Downtime Deploy
 
 on:
   push:
@@ -7,10 +7,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Build Docker image
@@ -19,9 +19,8 @@ jobs:
         docker save -o image.tar next-app:latest
         chmod 644 image.tar
 
-
-    - name: Transfer artifacts
-      uses: appleboy/scp-action@v0.1.7
+    - name: Transfer files via SCP
+      uses: appleboy/scp-action@v1.2.0
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
@@ -29,17 +28,19 @@ jobs:
         port: 22
         source: "image.tar,docker-compose.yml,Caddyfile"
         target: "~/next-app"
-    - name: Deploy on server
+        strip_components: 1
+
+    - name: Deploy to server
       uses: appleboy/ssh-action@v1.2.0
       with:
-        host: ${{ secrets.SERVER_HOST }}  # Обязательный параметр
+        host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         script: |
           cd ~/next-app
           sudo docker load -i image.tar
           sudo docker compose -f ./docker-compose.yml up -d --scale app=2 --no-recreate
-          sleep 10
+          sleep 15
           sudo docker compose -f ./docker-compose.yml up -d --force-recreate
           sudo docker compose -f ./docker-compose.yml exec caddy caddy reload
-
+          sudo docker image prune -af

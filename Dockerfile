@@ -1,14 +1,15 @@
-# Dockerfile
-FROM oven/bun:1.0.13 as builder
+# Используем официальный образ Bun с Alpine для уменьшения размера
+FROM oven/bun:1.2-alpine AS builder
 
+# Фиксируем регистр ключевого слова AS
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN bun install --production --frozen-lockfile
+RUN bun install --frozen-lockfile --production
 COPY . .
 RUN bun run build
 
-FROM oven/bun:1.0.13-slim
-
+# Финальный образ на основе slim-версии
+FROM oven/bun:1.2-slim
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000

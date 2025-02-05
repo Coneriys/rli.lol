@@ -32,14 +32,11 @@ jobs:
     - name: Deploy on server
       uses: appleboy/ssh-action@v1.2.0
       with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        password: ${{ secrets.SERVER_PASSWORD }}
         script: |
           cd ~/next-app
           sudo docker load -i image.tar
-          sudo docker compose up -d --scale app=2 --no-recreate
+          sudo docker compose -f ./docker-compose.yml up -d --scale app=2 --no-recreate
           sleep 10
-          sudo docker compose up -d --force-recreate
-          sudo docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-          sudo docker compose rm app --force --stop -v
+          sudo docker compose -f ./docker-compose.yml up -d --force-recreate
+          sudo docker compose -f ./docker-compose.yml exec caddy caddy reload
+

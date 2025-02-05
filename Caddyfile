@@ -1,8 +1,0 @@
-rli.lol {
-    tls levdmytriev@gmail.com
-    reverse_proxy app:3000
-}
-
-:80 {
-    redir https://{host}{uri} permanent
-}

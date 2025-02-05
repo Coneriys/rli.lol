@@ -26,7 +26,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: 22
-        source: "image.tar,docker-compose.yml,Caddyfile"
+        source: "image.tar,docker-compose.yml"
         target: "~/next-app"
         strip_components: 1
 
@@ -42,5 +42,4 @@ jobs:
           sudo docker compose -f ./docker-compose.yml up -d --scale app=2 --no-recreate
           sleep 15
           sudo docker compose -f ./docker-compose.yml up -d --force-recreate
-          sudo docker compose -f ./docker-compose.yml exec caddy caddy reload
           sudo docker image prune -af

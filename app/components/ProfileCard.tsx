@@ -2,7 +2,8 @@
 'use client';
 
 import { Card, CardBody, Avatar, Button } from "@heroui/react";
-import { SiDiscord, SiGithub, SiRoblox } from "react-icons/si";
+import { SiTelegram, SiGithub, SiRoblox } from "react-icons/si";
+import { TbRosetteDiscountCheckFilled } from "react-icons/tb";
 
 export default function ProfileCard() {
   return (
@@ -21,7 +22,7 @@ export default function ProfileCard() {
         <div className="flex flex-col items-center gap-1">
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold text-white">rli</h2>
-            <span className="text-blue-400">✓</span>
+            <TbRosetteDiscountCheckFilled className="text-blue-400"/>
           </div>
           
           <p className="text-small text-default-500">
@@ -31,7 +32,7 @@ export default function ProfileCard() {
 
         <div className="flex gap-3">
           {[
-            { icon: SiDiscord, href: "https://discord.com/users/1107987212789895189" },
+            { icon: SiTelegram, href: "https://t.me/@gpslocator" },
             { icon: SiGithub, href: "https://github.com/rligram" }, 
             { icon: SiRoblox, href: "https://www.roblox.com/users/18635058/profile" }
           ].map((item, index) => (
@@ -40,6 +41,7 @@ export default function ProfileCard() {
               isIconOnly
               variant="light" 
               className="text-[#004242] hover:text-white hover:bg-[#004242]"
+              onPress={() => window.open(item.href, "_blank")}
             >
               <item.icon size={20} />
             </Button>

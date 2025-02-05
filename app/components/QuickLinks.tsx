@@ -6,10 +6,10 @@ import { SiGo, SiPython, SiJavascript, SiReact } from "react-icons/si";
 
 export function QuickLinks() {
   const links = [
-    { icon: SiGo, label: "Go" },
-    { icon: SiPython, label: "Python" },
-    { icon: SiJavascript, label: "JS" },
-    { icon: SiReact, label: "React" }
+    { icon: SiGo, label: "Go", href: "go.dev" },
+    { icon: SiPython, label: "Python", href: "python.org" },
+    { icon: SiJavascript, label: "JS", href: "developer.mozilla.org" },
+    { icon: SiReact, label: "React", href: "react.dev" }
   ];
 
   return (
@@ -19,6 +19,7 @@ export function QuickLinks() {
           <div 
             key={i}
             className="flex flex-col items-center gap-1 cursor-pointer text-[#004242] hover:text-[#ffffff] transition-colors"
+            onClick={() => window.open(`https://${link.href}`, "_blank")}
           >
             <link.icon size={24} />
             <span className="text-xs">{link.label}</span>

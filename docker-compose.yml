@@ -6,7 +6,7 @@ services:
       - caddy
 
   caddy:
-    image: caddy:latest
+    image: caddy:builder-alpine
     restart: always
     ports:
       - "80:80"

@@ -17,6 +17,8 @@ jobs:
       run: |
         docker build -t next-app:latest .
         docker save -o image.tar next-app:latest
+        chmod 644 image.tar
+
 
     - name: Transfer artifacts
       uses: appleboy/scp-action@v0.1.7

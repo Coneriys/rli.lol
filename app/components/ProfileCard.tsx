@@ -32,7 +32,7 @@ export default function ProfileCard() {
 
         <div className="flex gap-3">
           {[
-            { icon: SiTelegram, href: "https://t.me/@gpslocator" },
+            { icon: SiTelegram, href: "https://t.me/gpslocator" },
             { icon: SiGithub, href: "https://github.com/rligram" }, 
             { icon: SiRoblox, href: "https://www.roblox.com/users/18635058/profile" }
           ].map((item, index) => (

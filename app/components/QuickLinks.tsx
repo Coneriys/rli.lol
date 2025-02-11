@@ -6,7 +6,7 @@ import { FaGolang, FaPython, FaJavascript, FaReact } from "react-icons/fa";
 
 export function QuickLinks() {
   const links = [
-    { icon: FaGo, label: "Go", href: "go.dev" },
+    { icon: FaGolang, label: "Go", href: "go.dev" },
     { icon: FaPython, label: "Python", href: "python.org" },
     { icon: FaJavascript, label: "JS", href: "developer.mozilla.org" },
     { icon: FaReact, label: "React", href: "react.dev" }

@@ -2,7 +2,7 @@
 'use client';
 
 import { Card } from "@heroui/react";
-import { FaPython, FaJavascript, FaReact } from "react-icons/fa";
+import { FaPython, FaJS, FaReact } from "react-icons/fa";
 import { FaGolang } from "react-icons/fa6";
 
 export function QuickLinks() {

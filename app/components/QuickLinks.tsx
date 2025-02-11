@@ -2,14 +2,14 @@
 'use client';
 
 import { Card } from "@heroui/react";
-import { SiGo, SiPython, SiJavascript, SiReact } from "react-icons/si";
+import { FaGo, FaPython, FaJavascript, FaReact } from "react-icons/fa";
 
 export function QuickLinks() {
   const links = [
-    { icon: SiGo, label: "Go", href: "go.dev" },
-    { icon: SiPython, label: "Python", href: "python.org" },
-    { icon: SiJavascript, label: "JS", href: "developer.mozilla.org" },
-    { icon: SiReact, label: "React", href: "react.dev" }
+    { icon: FaGo, label: "Go", href: "go.dev" },
+    { icon: FaPython, label: "Python", href: "python.org" },
+    { icon: FaJavascript, label: "JS", href: "developer.mozilla.org" },
+    { icon: FaReact, label: "React", href: "react.dev" }
   ];
 
   return (
